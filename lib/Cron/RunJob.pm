@@ -17,7 +17,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 my ($job_pid, %_data);
@@ -192,7 +192,7 @@ Run a cmd and email any error to the supplied email address
 
 =head1 AUTHOR
 
-Kiel R Stirling, E<lt>kieldstr@cpan.org<gt>
+Kiel R Stirling, E<lt>kielstr@cpan.org<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
