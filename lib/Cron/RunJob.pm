@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my ($job_pid, %_data);
 $SIG{TERM} = $SIG{INT} = sub {
@@ -77,7 +77,7 @@ sub run {
 	
 	if ($self->only_me and $self->is_running($self->runfile_name($cmd))) {
 		$self->stderr("Proccess is already running ");
-		$self->exitcode(1);
+		$self->failed(1);
 		return 0;
 	}	
 	
@@ -141,8 +141,6 @@ sub run {
 
 	$self->unlink_runfile($self->runfile_name($cmd))
 		if $self->only_me;
-	
-	return $self->exitcode;
 }
 
 sub AUTOLOAD {
@@ -189,6 +187,9 @@ Run and monitor a command.
 
 
 =head2 new()
+
+=pod
+
 ONLY_ME
 
 If true only allow one instance of the command.
@@ -213,7 +214,7 @@ MAIL_SUBJECT
 
 The subject of the email.
 
-=head2 run_command(cmd, (args))
+=head2 run(cmd, (args))
 
 Runs the command.
 

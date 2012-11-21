@@ -25,7 +25,8 @@ DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-  blah blah blah
+Mail::Mailer
+use IPC::Open3;
 
 COPYRIGHT AND LICENCE
 
