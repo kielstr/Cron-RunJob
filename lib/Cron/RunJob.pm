@@ -10,6 +10,7 @@ use IO::Select;
 use IO::File;
 use IPC::Open3;
 use POSIX ":sys_wait_h";
+use Data::Dumper;
 
 require Exporter;
 
@@ -17,8 +18,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-our $VERSION = '0.02';
-
+our $VERSION = '0.00003';
 
 my ($job_pid, %_data);
 $SIG{TERM} = $SIG{INT} = sub {
@@ -37,7 +37,8 @@ sub new {
 sub runfile_name {
 	my ($self, $cmd) = @_;
 	$cmd =~ s/.*\///;
-	return $self->runfile_dir .'/'. $cmd . ".pid";
+	my $dir = $self->runfile_dir || '/var/run';
+	return $dir .'/'. $cmd . ".pid";
 }
 
 sub create_runfile {
@@ -51,7 +52,9 @@ sub create_runfile {
 
 sub unlink_runfile {
 	my ($self, $runfile) = @_;
-	unlink $runfile or die $!;
+	if (-e $runfile) {
+		unlink $runfile or die $!;
+	}
 }
 
 sub is_running {
@@ -69,7 +72,7 @@ sub is_running {
 	return 0;	
 }
 
-sub run_command {
+sub run {
 	my ($self, $cmd, @argv) = @_;
 	
 	if ($self->only_me and $self->is_running($self->runfile_name($cmd))) {
@@ -107,29 +110,28 @@ sub run_command {
 	$chld_stdin->close;
 	
 	waitpid($job_pid, 0);
-
 	if ($std_error) {
 		$self->stderr($std_error);
-		if ($self->mail_errors) {
+		if ($self->mail_stderr) {
 			my $mailer = new Mail::Mailer 'sendmail';
 			$mailer->open({
-				To => $self->mailto,
-				From => $self->from,
-				Subject => $self->subject,
+				To => $self->mail_to,
+				From => $self->mail_from,
+				Subject => $self->mail_subject,
 			});
 
 			print $mailer "Error: $cmd failed with error(s): ".($std_error ? $std_error:'unknown errors')."\n";
 			$mailer->close;
 		}
-		$self->exitcode(1);
+		$self->failed(1);
 	} else {
-		$self->exitcode(0);
+		$self->failed(0);
 		$self->stdout($std_out);
-		if ($self->mail_output) {
+		if ($self->mail_stdout) {
 			my $mailer = new Mail::Mailer 'sendmail';
 			$mailer->open({
-				From => $self->from,
-				To => $self->mailto,
+				From => $self->mail_from,
+				To => $self->mail_to,
 				Subject => "$cmd output",
 			});
 			
@@ -146,17 +148,16 @@ sub run_command {
 sub AUTOLOAD {
 	my $self = shift;
 	(my $attr = $AUTOLOAD) =~ s/^.*:://;
-	if (exists $self->{uc $attr} and $self->{uc $attr}) {
-		return $self->{uc $attr};
+	if (exists $_data{refaddr $self}->{uc $attr} and $_data{refaddr $self}->{uc $attr}) {
+		return $_data{refaddr $self}->{uc $attr};
 	} else {
 		my $value = shift;
-		$self->{uc $attr} = $value if $value;
+		$_data{refaddr $self}->{uc $attr} = $value if $value;
 	}
 }
 
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
@@ -164,31 +165,69 @@ Cron::RunJob - Monitor Cron Jobs
 
 =head1 SYNOPSIS
 
+	use strict;
 	use Cron::RunJob;
-  
-  	my $cmd = shift;
-	my $job = new CSU::Job 
+
+	my $job = Cron::RunJob->new(
 		ONLY_ME => 1,
-		RUNFILE_DIR => "/var/run/",
-		MAIL_ERRORS => 1,
-		MAILTO => 'user@domain.com',
-		FROM => 'no-reply@domain.com',
-		SUBJECT => "[crond] Error -- $cmd",
-	;  
-	
-	$job->run_command($cmd, @args);
-	
-	if ($job->exitcode) {
-		print $job->errstr. "\n\n" if $job->errstr;
-	} else {
-		print $job->output. "\n\n" if $job->output;
-	}
+		MAIL_STDERR => 1,
+		MAIL_STDOUT => 1,
+		MAIL_TO => 'kielstr@cpan.org',
+		MAIL_FROM => 'kielstr@cpan.org',
+		MAIL_SUBJECT => 'Cron::RunJob test',
+		RUNFILE_DIR => '.'
+	);
+
+	$job->run(shift, @ARGV);
+
+	print (($job->failed) ? $job->stderr : $job->stdout);
 	
 =head1 DESCRIPTION
 
 
-Run a cmd and email any error to the supplied email address
+Run and monitor a command.
 
+
+=head2 new()
+ONLY_ME
+
+If true only allow one instance of the command.
+
+RUNFILE_DIR
+
+The location to create a run file.
+
+MAIL_STDOUT
+
+If true mail STDOUT to MAIL_TO.
+
+MAIL_STDERR
+
+If true mail STDERR to MAIL_TO.
+
+MAIL_FROM 
+
+The return address for the email.
+ 
+MAIL_SUBJECT 
+
+The subject of the email.
+
+=head2 run_command(cmd, (args))
+
+Runs the command.
+
+=head2 failed()
+
+Returns true if the command failed.
+
+=head2 stderr()
+
+Returns STDERR of the command. 
+
+=head2 stdout()
+
+Returns STDOUT of the command.
 
 =head1 AUTHOR
 
