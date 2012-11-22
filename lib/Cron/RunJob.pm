@@ -18,7 +18,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 my ($job_pid, %_data);
 $SIG{TERM} = $SIG{INT} = sub {
@@ -117,7 +117,7 @@ sub run {
 			$mailer->open({
 				To => $self->mail_to,
 				From => $self->mail_from,
-				Subject => $self->mail_subject,
+				Subject => 'STDERR: '. $self->mail_subject,
 			});
 
 			print $mailer "Error: $cmd failed with error(s): ".($std_error ? $std_error:'unknown errors')."\n";
@@ -132,7 +132,7 @@ sub run {
 			$mailer->open({
 				From => $self->mail_from,
 				To => $self->mail_to,
-				Subject => "$cmd output",
+				Subject => 'STDOUT: '. $self->mail_subject,
 			});
 			
 			print $mailer $self->stdout;
