@@ -76,7 +76,7 @@ sub run {
 	my ($self, $cmd, @argv) = @_;
 	
 	if ($self->only_me and $self->is_running($self->runfile_name($cmd))) {
-		$self->stderr("Proccess is already running ");
+		$self->stderr("Proccess is already running");
 		$self->failed(1);
 		return 0;
 	}	
@@ -110,6 +110,7 @@ sub run {
 	$chld_stdin->close;
 	
 	waitpid($job_pid, 0);
+	
 	if ($std_error) {
 		$self->stderr($std_error);
 		if ($self->mail_stderr) {
